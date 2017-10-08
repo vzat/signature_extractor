@@ -75,6 +75,26 @@ signature = cv2.imread(imgsPath + 'Boss.bmp')
 
 # TODO Throw error if it's not a valid image
 
+def getPageFromImage(img):
+    gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    bImg = cv2.medianBlur(src = gImg, ksize = 11)
+
+    threshold, _ = cv2.threshold(src = bImg, thresh = 0, maxval = 255, type = cv2.THRESH_BINARY | cv2.THRESH_OTSU)
+    cannyImg = cv2.Canny(image = bImg, threshold1 = 0.5 * threshold, threshold2 = threshold)
+
+    _, contours, _ = cv2.findContours(image = cannyImg.copy(), mode = cv2.RETR_TREE, method = cv2.CHAIN_APPROX_SIMPLE)
+
+    if len(contours) == 0:
+        return img
+
+    maxRect = Rect(0, 0, 0, 0)
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(points = contour)
+        currentArea = w * h
+        if currentArea > maxRect.getArea():
+            maxRect.set(x, y, w, h)
+
+    return img[maxRect.y : maxRect.y + maxRect.h, maxRect.x : maxRect.x + maxRect.w]
 
 def getSignatureFromPage(img):
     imgSize = np.shape(img)
@@ -136,6 +156,7 @@ def getSignature(img):
 
     return cv2.bitwise_and(signature, signature, mask=rmask)
 
+signature = getPageFromImage(img = signature)
 signature = getSignatureFromPage(img = signature)
 signature = getSignature(img = signature)
 
