@@ -109,7 +109,29 @@ def getSignatureFromPage(img):
 def getSignature(img):
     gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    mask = cv2.adaptiveThreshold(gImg, maxValue = 255, adaptiveMethod = cv2.ADAPTIVE_THRESH_MEAN_C, thresholdType = cv2.THRESH_BINARY, blockSize = 21, C = 10)
+    # minBlockSize = 3
+    # maxBlockSize = 101
+    # minC = 3
+    # maxC = 101
+    #
+    # bestContourNo = 1000000
+    # bestBlockSize = 0
+    # bestC = 0
+    #
+    # for c in range(minC, maxC, 2):
+    #     for bs in range(minBlockSize, maxBlockSize, 2):
+    #         mask = cv2.adaptiveThreshold(gImg, maxValue = 255, adaptiveMethod = cv2.ADAPTIVE_THRESH_MEAN_C, thresholdType = cv2.THRESH_BINARY, blockSize = bs, C = c)
+    #         rmask = cv2.bitwise_not(mask)
+    #         _, contours, _ = cv2.findContours(image = rmask.copy(), mode = cv2.RETR_TREE, method = cv2.CHAIN_APPROX_SIMPLE)
+    #         if len(contours) > 15 and len(contours) < bestContourNo:
+    #             bestContourNo = len(contours)
+    #             bestBlockSize = bs
+    #             bestC = c
+
+    # blockSize = 21, C = 10
+    blockSize = 21
+    C = 10
+    mask = cv2.adaptiveThreshold(gImg, maxValue = 255, adaptiveMethod = cv2.ADAPTIVE_THRESH_MEAN_C, thresholdType = cv2.THRESH_BINARY, blockSize = blockSize, C = C)
     rmask = cv2.bitwise_not(mask)
 
     return cv2.bitwise_and(signature, signature, mask=rmask)
