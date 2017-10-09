@@ -80,6 +80,13 @@ signature = cv2.imread(imgsPath + 'Trump.jpg')
 # TODO Throw error if it's not a valid image
 
 def getPageFromImage(img):
+    # New Idea:
+    # Break the image into multiple blocks
+    # Find the mean value of the pixels in each block
+    # Get the highest mean value and use it as a theshold
+    # Get biggest contour
+    # Get bounding box of the contour
+
     gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # bImg = cv2.medianBlur(src = gImg, ksize = 11)
     bImg = gImg.copy()
@@ -176,8 +183,6 @@ def getSignature(img):
     return cv2.bitwise_and(signature, signature, mask=rmask)
 
 signature = getPageFromImage(img = signature)
-cv2.imshow('Signature', signature)
-cv2.waitKey(0)
 signature = getSignatureFromPage(img = signature)
 signature = getSignature(img = signature)
 
