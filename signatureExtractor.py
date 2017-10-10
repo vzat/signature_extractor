@@ -73,19 +73,14 @@ class Rect:
 
 # TODO Use easygui to open images
 imgsPath = 'images/'
-signature = cv2.imread(imgsPath + 'Trump.jpg')
+signature = cv2.imread(imgsPath + 'sig1.jpg')
 # signature = cv2.medianBlur(signature, 3)
 # signature = cv2.GaussianBlur(signature, (3, 3), 0)
 
 # TODO Throw error if it's not a valid image
 
 def getPageFromImage(img):
-    # New Idea:
-    # Break the image into multiple blocks
-    # Find the mean value of the pixels in each block
-    # Get the highest mean value and use it as a theshold
-    # Get biggest contour
-    # Get bounding box of the contour
+    imgSize = np.shape(img)
 
     gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # bImg = cv2.medianBlur(src = gImg, ksize = 11)
@@ -96,10 +91,13 @@ def getPageFromImage(img):
 
     _, contours, _ = cv2.findContours(image = cannyImg.copy(), mode = cv2.RETR_TREE, method = cv2.CHAIN_APPROX_SIMPLE)
 
+    # There is no page in the image
     if len(contours) == 0:
+        print 'No Page Found'
         return img
 
     maxRect = Rect(0, 0, 0, 0)
+    coordinates = []
     for contour in contours:
         # Detect edges
         # Reference - http://docs.opencv.org/3.1.0/dd/d49/tutorial_py_contour_features.html
@@ -114,7 +112,19 @@ def getPageFromImage(img):
             maxRect.set(x, y, w, h)
             # maxRect.setArea(currentArea)
 
+    contoursInPage = 0
+    for contour in contours:
+        x, y, _, _ = cv2.boundingRect(points = contour)
+        if (x > maxRect.x and x < maxRect.x + maxRect.w) and (y > maxRect.y and y < maxRect.y + maxRect.h):
+                contoursInPage += 1
+
+    maxContours = 5
+    if contoursInPage <= maxContours:
+        print 'No Page Found'
+        return img
+
     return img[maxRect.y : maxRect.y + maxRect.h, maxRect.x : maxRect.x + maxRect.w]
+
 
 def getSignatureFromPage(img):
     imgSize = np.shape(img)
@@ -153,6 +163,8 @@ def getSignatureFromPage(img):
     return img[maxRect.y : maxRect.y + maxRect.h, maxRect.x : maxRect.x + maxRect.w]
 
 def getSignature(img):
+    imgSize = np.shape(img)
+
     gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # minBlockSize = 3
@@ -175,12 +187,32 @@ def getSignature(img):
     #             bestC = c
 
     # blockSize = 21, C = 10
+
+    # TODO throw error if blockSize is bigger than image
     blockSize = 21
     C = 10
+    if blockSize > imgSize[0]:
+        if imgSize[0] % 2 == 0:
+            blockSize = imgSize[0] - 1
+        else:
+            blockSize = imgSize[0]
+
+    if blockSize > imgSize[1]:
+        if imgSize[0] % 2 == 0:
+            blockSize = imgSize[1] - 1
+        else:
+            blockSize = imgSize[1]
+
     mask = cv2.adaptiveThreshold(gImg, maxValue = 255, adaptiveMethod = cv2.ADAPTIVE_THRESH_MEAN_C, thresholdType = cv2.THRESH_BINARY, blockSize = blockSize, C = C)
     rmask = cv2.bitwise_not(mask)
 
     return cv2.bitwise_and(signature, signature, mask=rmask)
+
+# Camera capture
+camera = cv2.VideoCapture(0)
+(grabbed, signature) = camera.read()
+cv2.imshow('Picture', signature)
+cv2.waitKey(0)
 
 signature = getPageFromImage(img = signature)
 signature = getSignatureFromPage(img = signature)
