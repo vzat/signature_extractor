@@ -4,4 +4,4 @@ from matplotlib import pyplot as plt
 from matplotlib import image as image
 import easygui
 
-help(cv2.boundingRect)
+help(cv2.approxPolyDP)

@@ -73,7 +73,7 @@ class Rect:
 
 # TODO Use easygui to open images
 imgsPath = 'images/'
-signature = cv2.imread(imgsPath + 'sig1.jpg')
+signature = cv2.imread(imgsPath + 'Trump.jpg')
 # signature = cv2.medianBlur(signature, 3)
 # signature = cv2.GaussianBlur(signature, (3, 3), 0)
 
@@ -110,6 +110,7 @@ def getPageFromImage(img):
         # check if length of approx is 4
         if len(corners) == 4 and currentArea > maxRect.getArea():
             maxRect.set(x, y, w, h)
+            print cv2.isContourConvex(contour)
             # maxRect.setArea(currentArea)
 
     contoursInPage = 0
@@ -209,10 +210,10 @@ def getSignature(img):
     return cv2.bitwise_and(signature, signature, mask=rmask)
 
 # Camera capture
-camera = cv2.VideoCapture(0)
-(grabbed, signature) = camera.read()
-cv2.imshow('Picture', signature)
-cv2.waitKey(0)
+# camera = cv2.VideoCapture(0)
+# (grabbed, signature) = camera.read()
+# cv2.imshow('Picture', signature)
+# cv2.waitKey(0)
 
 signature = getPageFromImage(img = signature)
 signature = getSignatureFromPage(img = signature)
