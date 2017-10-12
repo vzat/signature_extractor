@@ -8,8 +8,12 @@
 #	Title: Signature Extractor
 #
 #   Introduction:
+#   Extract the signature from an image by firstly extracting the page in it (if any)
+#   then extracting a signature block, and in the end use thresholding to extract only the
+#   signature in the correct colour. Allow the user to import an image from file or capture
+#   from the camera. The result can be viewed on the screen or exported to file.
 #
-#   There are three main steps in extracting the signature from an image:
+#   Structure:
 #   1. Extract the Page
 #       a. Convert the image to Grayscale
 #           * Using only one channel is necessary for both edge detection and segmentation
@@ -29,9 +33,37 @@
 #             or the signature) then it's a false alarm and there is no complete page in the image
 #             so the whole image is used in the next step
 #   2. Extracting the Signature
+#       a. Convert the image to Grayscale
+#       b. Find the edges of the image using Canny
+#       c. Getting the contours of the objects in the image
+#       d. Closing the image so the signatures is more filled and pronounced
+#       e. Finding the contour with the most number of edges
+#           * Opposed to the method from the first step, here the permimeter of the
+#             signature is multipled with 0.01 to give it a better shape of the signature [2]
+#           * Signatures have more edges than normal text in a page so the contour with
+#             the maximum ammount of edges should be the signature
+#       f. Pad the image so the signature can be viewed more easily
 #   3. Remove the background from the signature
+#       a. Convert the image to Grayscale
+#       b. Use adaptive thresholding to extract only the signature
+#           * A block of 1/8 of the width of the image is used as it provides
+#             consistent results
+#           * If the image is too small then the width of the image is used instead
 #
 #   Experiments:
+#       * Blur the image using Median Blur and Bilateral Blur to maintain the edges
+#         but smooth the objects. It requires hardcoded values for the kernel size used
+#         and it doesn't provide good enough results
+#       * Use thresholding to extract the page. While it does provide similar results to
+#         the edge detection method, it requires hard coded values
+#       * Try to use Otsu's Algorithm for the final step. It does not provide good results,
+#         even for small parts of the image
+#       * Use Hough Line to get the lines in the image and extracting zones where they are
+#         intersecting. It does not detect lines in the images
+#       * Use a feature detection algorithm such as AKAZE to get the the features of the image.
+#         It doesn't provide better results than using Canny
+#       * Use different colour spaces to better extract the paper. The luminance or saturation
+#         provide similar results to grayscale
 #
 #   References:
 #       [1] M.Fang, GX.Yue1, QC.Yu, 'The Study on An Application of Otsu Method in Canny Operator',
@@ -40,27 +72,6 @@
 #       [2] OpenCV, 'Contour Approximation', 2015. [Online].
 #           Available: http://docs.opencv.org/3.1.0/dd/d49/tutorial_py_contour_features.html
 #           [Accessed: 2017-10-05]
-#
-#   Describe the algorithm here instead of doing it line by line (10 - 15 lines)
-#	Preferably use a systematic approach
-#	e.g. step-by-step
-#	or pseudocode
-#	Give an overview
-#	Comment on experiments
-#	Use references (Harvard Reference System or IEEE) - no weblinks
-
-# Get Signature from Page:
-# convert image to grayscale
-# get edges of the signature
-# close the result
-# find contours
-# find the contour with the biggest bounding rectangle area
-# add padding to the bounding rectangle
-# generate a new image that only contains the largest bounding rectangle
-
-# Extra Notes:
-# Filtering is not necessary because writting doesn't have a texture to impede edge detection
-# Filtering in this case only makes the text harder to read
 
 import numpy as np
 import cv2
@@ -86,7 +97,6 @@ def getImageFromCamera():
     return img
 
 def writeImageToFile(img, mask, fileName = 'signature'):
-    # # Reference - https://docs.opencv.org/2.4/modules/core/doc/operations_on_arrays.html#merge
     b, g, r = cv2.split(img)
     imgWithAlpha = cv2.merge((b, g, r, mask))
     cv2.imwrite(fileName + '.png', imgWithAlpha)
@@ -198,7 +208,7 @@ def getSignatureFromPage(img):
     threshold, _ = cv2.threshold(src = gImg, thresh = 0, maxval = 255, type = cv2.THRESH_BINARY | cv2.THRESH_OTSU)
     cannyImg = cv2.Canny(image = gImg, threshold1 = 0.5 * threshold, threshold2 = threshold)
 
-    # The kernel is wide as most signature are wide
+    # The kernel is wide as most signatures are wide
     kernel = cv2.getStructuringElement(shape = cv2.MORPH_RECT, ksize = (30, 1))
     cannyImg = cv2.morphologyEx(src = cannyImg, op = cv2.MORPH_CLOSE, kernel = kernel)
 
@@ -287,14 +297,3 @@ elif selection == 1:
     writeImageToFile(signature, mask)
 else:
     quit()
-
-# buttonbox?
-# Buttons:
-# select file
-# capture image from camera
-# export signature to file
-# display signature
-# maybe extra features (checkboxes?) to improved the detection
-
-# cv2.imshow('Test', img)
-# cv2.waitKey(0)
