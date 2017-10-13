@@ -64,6 +64,8 @@
 #         It doesn't provide better results than using Canny
 #       * Use different colour spaces to better extract the paper. The luminance or saturation
 #         provide similar results to grayscale
+#       * Make the image smaller if the image is too big as the signature extraction does not
+#         work properly with large images. It causes problems for some images.
 #
 #   References:
 #       [1] M.Fang, GX.Yue1, QC.Yu, 'The Study on An Application of Otsu Method in Canny Operator',
@@ -82,8 +84,7 @@ def getImageFromFile():
     img = cv2.imread(file)
 
     if img is None:
-        print 'Error: Not a valid image type'
-        quit()
+        errorPrompt('Not a valid image type')
 
     return img
 
@@ -92,20 +93,29 @@ def getImageFromCamera():
     (success, img) = camera.read()
 
     if not success:
-        print 'Error: Cannot capture image'
+        errorPrompt('Cannot capture image')
 
     return img
 
-def writeImageToFile(img, mask, fileName = 'signature'):
+def writeImageToFile(img, mask):
+    # The mask of the signature can be used as the alpha channel of the image
     b, g, r = cv2.split(img)
     imgWithAlpha = cv2.merge((b, g, r, mask))
-    cv2.imwrite(fileName + '.png', imgWithAlpha)
+
+    file = easygui.filesavebox()
+    fileName = file + '.png'
+
+    if fileName is None:
+        errorPrompt('No Name Selected')
+
+    cv2.imwrite(fileName, imgWithAlpha)
 
 def displayImageToScreen(img, mask):
     imgSize = np.shape(img)
     bg = np.zeros((imgSize[0], imgSize[1], 3), np.uint8)
     bg[:, :] = (255, 255, 255)
 
+    # Add a white background to the signature
     rmask = cv2.bitwise_not(mask)
     bgROI = cv2.bitwise_and(bg, bg, mask = rmask)
     sigROI = cv2.bitwise_and(signature, signature, mask = mask)
@@ -115,9 +125,14 @@ def displayImageToScreen(img, mask):
     cv2.imshow('Signature', roi)
     cv2.waitKey(0)
 
+def errorPrompt(errorMsg):
+    print 'Error: ' + errorMsg
+    easygui.msgbox(msg = errorMsg, title = 'ERROR', ok_button = 'OK')
+    quit()
+
 def scaleImageDown(img):
     imgSize = np.shape(img)
-    maxSize = (1080, 1920)
+    maxSize = (1920, 1080)
     if imgSize[0] > maxSize[0] or imgSize[1] > maxSize[1]:
         print 'Warning: Image too big'
         wRatio = float(float(maxSize[0]) / float(imgSize[0]))
@@ -169,10 +184,13 @@ def getPageFromImage(img):
     }
     coordinates = []
     for contour in contours:
+        # Perimeter accuracy
         arcPercentage = 0.1
+
+        # Contour Perimeter
         epsilon = cv2.arcLength(curve = contour, closed = True) * arcPercentage
         corners = cv2.approxPolyDP(curve = contour, epsilon = epsilon, closed = True)
-        x, y, w, h = cv2.boundingRect(points = contour)
+        x, y, w, h = cv2.boundingRect(points = corners)
         currentArea = w * h
 
         if len(corners) == 4:
@@ -227,10 +245,13 @@ def getSignatureFromPage(img):
     }
     maxCorners = 0
     for contour in contours:
+        # Perimeter accuracy
         arcPercentage = 0.01
+
+        # Contour perimeter
         epsilon = cv2.arcLength(curve = contour, closed = True) * arcPercentage
         corners = cv2.approxPolyDP(curve = contour, epsilon = epsilon, closed = True)
-        x, y, w, h = cv2.boundingRect(points = contour)
+        x, y, w, h = cv2.boundingRect(points = corners)
 
         if len(corners) > maxCorners:
             maxCorners = len(corners)
@@ -253,7 +274,7 @@ def getSignature(img):
 
     gImg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    # Adaptive Thresholding requires the blocksize to be even and bigger than 1
+    # Adaptive Thresholding requires the blocksize to be odd and bigger than 1
     blockSize = 1 / 8 * imgSize[0] / 2 * 2 + 1
     if blockSize <= 1:
         blockSize = imgSize[0] / 2 * 2 + 1
@@ -276,9 +297,6 @@ elif selection == 1:
     img = getImageFromCamera()
 else:
     quit()
-
-# Make the image smaller if the image is too big as the signature extraction does not work properly with large images
-img = scaleImageDown(img)
 
 # Extract Signature
 page = getPageFromImage(img = img)
